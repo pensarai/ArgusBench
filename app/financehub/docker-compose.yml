@@ -1,0 +1,54 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15
+    container_name: financehub-postgres
+    environment:
+      POSTGRES_DB: financehub
+      POSTGRES_USER: financehub
+      POSTGRES_PASSWORD: financehub
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: financehub-redis
+    ports:
+      - "6379:6379"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.1
+    container_name: financehub-keycloak
+    command: ["start-dev"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8081:8080"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: financehub-app
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8080
+      # Enable DB + Flyway when Phase 1 is implemented
+      # SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/financehub
+      # SPRING_DATASOURCE_USERNAME: financehub
+      # SPRING_DATASOURCE_PASSWORD: financehub
+      # SPRING_FLYWAY_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+      - keycloak
+
+volumes:
+  pgdata:
+
+
