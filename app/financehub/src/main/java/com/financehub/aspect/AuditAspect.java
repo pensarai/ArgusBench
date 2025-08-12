@@ -75,6 +75,42 @@ public class AuditAspect {
     SENSITIVE_KEYS.add("token");
     SENSITIVE_KEYS.add("secret");
     SENSITIVE_KEYS.add("authorization");
+    // Add common variants and patterns
+    SENSITIVE_KEYS.add("passwd");
+    SENSITIVE_KEYS.add("pwd");
+    SENSITIVE_KEYS.add("access_token");
+    SENSITIVE_KEYS.add("refresh_token");
+    SENSITIVE_KEYS.add("api_key");
+    SENSITIVE_KEYS.add("apikey");
+    SENSITIVE_KEYS.add("auth");
+    SENSITIVE_KEYS.add("session");
+    SENSITIVE_KEYS.add("ssn");
+    SENSITIVE_KEYS.add("creditcard");
+    SENSITIVE_KEYS.add("cardnumber");
+    SENSITIVE_KEYS.add("cvv");
+    SENSITIVE_KEYS.add("pin");
+    SENSITIVE_KEYS.add("iban");
+    SENSITIVE_KEYS.add("accountnumber");
+    SENSITIVE_KEYS.add("routingnumber");
+    SENSITIVE_KEYS.add("privatekey");
+    SENSITIVE_KEYS.add("private_key");
+    SENSITIVE_KEYS.add("securityanswer");
+    SENSITIVE_KEYS.add("security_answer");
+  }
+
+  // Heuristic: redact if key contains sensitive substrings
+  private static final String[] SENSITIVE_SUBSTRINGS = {
+    "pass", "pwd", "token", "secret", "auth", "session", "ssn", "credit", "card", "cvv", "iban", "account", "routing", "private", "security", "key"
+  };
+
+  private boolean isSensitiveKey(String key) {
+    if (key == null) return false;
+    String lower = key.toLowerCase();
+    if (SENSITIVE_KEYS.contains(lower)) return true;
+    for (String substr : SENSITIVE_SUBSTRINGS) {
+      if (lower.contains(substr)) return true;
+    }
+    return false;
   }
 
   private String serializeAndRedact(Object obj) {
@@ -94,7 +130,7 @@ public class AuditAspect {
       Map<Object, Object> copy = new java.util.LinkedHashMap<>();
       for (Map.Entry<?, ?> entry : map.entrySet()) {
         Object key = entry.getKey();
-        if (key instanceof String keyStr && SENSITIVE_KEYS.contains(keyStr.toLowerCase())) {
+        if (key instanceof String keyStr && isSensitiveKey(keyStr)) {
           copy.put(key, "***");
         } else {
           copy.put(key, redactSensitiveFields(entry.getValue()));
@@ -124,7 +160,7 @@ public class AuditAspect {
         java.beans.BeanInfo beanInfo = java.beans.Introspector.getBeanInfo(clazz, Object.class);
         for (java.beans.PropertyDescriptor pd : beanInfo.getPropertyDescriptors()) {
           String name = pd.getName();
-          if (SENSITIVE_KEYS.contains(name.toLowerCase())) {
+          if (isSensitiveKey(name)) {
             if (pd.getWriteMethod() != null) {
               pd.getWriteMethod().invoke(copy, "***");
             }
@@ -146,7 +182,7 @@ public class AuditAspect {
     if (obj instanceof Map<?, ?> map) {
       Map<Object, Object> redacted = new java.util.LinkedHashMap<>();
       for (Object key : map.keySet()) {
-        if (key instanceof String keyStr && SENSITIVE_KEYS.contains(keyStr.toLowerCase())) {
+        if (key instanceof String keyStr && isSensitiveKey(keyStr)) {
           redacted.put(key, "***");
         } else {
           redacted.put(key, "[REDACTED]");
