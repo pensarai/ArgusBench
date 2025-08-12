@@ -6,7 +6,7 @@ import com.financehub.tenancy.TenantContext;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
-import lombok.RequiredArgsConstructor;
+lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileService {
   private final FileResourceRepository fileRepository;
 
+  private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
   @Transactional
   public String upload(MultipartFile file) {
     String tenantId = TenantContext.getTenantId();
@@ -30,6 +32,9 @@ public class FileService {
         || contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         || contentType.equals("text/plain"))) {
       throw new IllegalArgumentException("Unsupported file type");
+    }
+    if (file.getSize() > MAX_FILE_SIZE) {
+      throw new IllegalArgumentException("File size exceeds maximum allowed limit (10MB)");
     }
     String id = UUID.randomUUID().toString();
     try {
@@ -72,5 +77,3 @@ public class FileService {
     return Path.of(fr.getPath());
   }
 }
-
-
