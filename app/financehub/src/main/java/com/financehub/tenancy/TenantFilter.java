@@ -32,12 +32,7 @@ public class TenantFilter extends OncePerRequestFilter {
       boolean publicPath = path.equals("/health") || path.startsWith("/actuator") ||
           ("POST".equalsIgnoreCase(request.getMethod()) && path.equals("/api/admin/tenants"));
       if (!publicPath) {
-        if (tenantId == null || tenantId.isBlank()) {
-          response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing X-Tenant-ID header");
-          return;
-        }
-        // Validate tenant exists and is active
-        if (tenantRepository.findBySlugAndActiveTrue(tenantId).isEmpty()) {
+        if (tenantId == null || tenantId.isBlank() || tenantRepository.findBySlugAndActiveTrue(tenantId).isEmpty()) {
           response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or inactive tenant");
           return;
         }
@@ -49,5 +44,4 @@ public class TenantFilter extends OncePerRequestFilter {
     }
   }
 }
-
 
