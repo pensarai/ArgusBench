@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService {
   private final NotificationRepository notificationRepository;
 
+  private static final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
   private static boolean isValidUserId(String userId) {
     return userId != null && userId.matches("^[a-zA-Z0-9_-]{1,64}$");
   }
@@ -30,17 +32,10 @@ public class NotificationService {
     if (!((json.startsWith("{") && json.endsWith("}")) || (json.startsWith("[") && json.endsWith("]")))) {
       return false;
     }
-    // Basic check for script tags or event handlers in the JSON string
-    String lower = json.toLowerCase();
-    if (lower.contains("<script") || lower.contains("onerror=") || lower.contains("onload=") || lower.contains("javascript:")) {
+    try {
+      objectMapper.readTree(json);
+    } catch (Exception e) {
       return false;
-    }
-    // Check for other common HTML event handlers
-    String[] eventHandlers = {"onabort=", "onblur=", "onchange=", "onclick=", "ondblclick=", "onfocus=", "onkeydown=", "onkeypress=", "onkeyup=", "onmousedown=", "onmousemove=", "onmouseout=", "onmouseover=", "onmouseup=", "onreset=", "onresize=", "onscroll=", "onselect=", "onsubmit=", "onunload="};
-    for (String handler : eventHandlers) {
-      if (lower.contains(handler)) {
-        return false;
-      }
     }
     return true;
   }
