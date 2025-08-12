@@ -14,10 +14,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
 public class ReportService {
+  private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
   private final ReportRepository reportRepository;
 
   @Transactional
@@ -31,6 +34,7 @@ public class ReportService {
     String base = System.getProperty("user.dir");
     LocalDate now = LocalDate.now();
     Path dir = Path.of(base, "var", "reports", tenantId, String.valueOf(now.getYear()), String.format("%02d", now.getMonthValue()));
+    boolean success = false;
     try {
       Files.createDirectories(dir);
       // Write a simple PDF-like artifact using JasperReports
@@ -57,9 +61,16 @@ public class ReportService {
           wb.write(fos);
         }
       }
-    } catch (Exception ignored) {}
-    reportRepository.save(r);
-    return r.getId();
+      success = true;
+    } catch (Exception ex) {
+      logger.error("Exception occurred during report generation for tenant {}: {}", tenantId, ex.getMessage(), ex);
+    }
+    if (success) {
+      reportRepository.save(r);
+      return r.getId();
+    } else {
+      return null;
+    }
   }
 
   @Transactional(readOnly = true)
@@ -81,5 +92,3 @@ public class ReportService {
     return java.nio.file.Path.of(r.getFilePath());
   }
 }
-
-
