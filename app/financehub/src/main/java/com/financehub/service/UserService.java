@@ -8,6 +8,7 @@ import com.financehub.tenancy.TenantContext;
 import java.util.List;
 import java.util.UUID;
 lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,14 +23,16 @@ public class UserService {
     u.setId(UUID.randomUUID().toString());
     u.setTenantId(TenantContext.getTenantId());
     u.setEmail(req.getEmail().toLowerCase());
-    if (userRepository.existsByTenantIdAndEmail(u.getTenantId(), u.getEmail())) {
-      throw new IllegalStateException("User with this email already exists in tenant");
-    }
     u.setFirstName(req.getFirstName());
     u.setLastName(req.getLastName());
     u.setRole(req.getRole());
-    User saved = userRepository.save(u);
-    return toResponse(saved);
+    try {
+      User saved = userRepository.save(u);
+      return toResponse(saved);
+    } catch (DataIntegrityViolationException ex) {
+      // Enforced by DB and JPA unique constraint
+      throw new IllegalStateException("User with this email already exists in tenant", ex);
+    }
   }
 
   @Transactional(readOnly = true)
@@ -84,4 +87,86 @@ public interface UserRepository extends JpaRepository<User, String> {
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT u FROM User u WHERE u.tenantId = :tenantId AND u.role = :role")
   List<User> findByTenantIdAndRoleForUpdate(@Param("tenantId") String tenantId, @Param("role") String role);
+}
+
+package com.financehub.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import java.time.Instant;
+lombok.Getter;
+lombok.Setter;
+
+@Getter
+@Setter
+@Entity
+@Table(
+  name = "users",
+  uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "email"})
+)
+public class User extends BaseEntity {
+  @Id
+  @Column(length = 36)
+  private String id;
+
+  @Column(nullable = false, length = 255)
+  private String email;
+
+  @Column(name = "first_name", nullable = false, length = 64)
+  private String firstName;
+
+  @Column(name = "last_name", nullable = false, length = 64)
+  private String lastName;
+
+  @Column(nullable = false, length = 32)
+  private String role;
+
+  @Column(name = "is_active", nullable = false)
+  private boolean active = true;
+
+  @Column(name = "last_login")
+  private Instant lastLogin;
+
+  public enum Role {
+    ADMIN,
+    USER,
+    MANAGER
+  }
+
+  public void setRole(String role) {
+    if (role == null) {
+      throw new IllegalArgumentException("Role cannot be null");
+    }
+    try {
+      Role.valueOf(role);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Invalid role: " + role);
+    }
+    this.role = role;
+  }
+}
+
+package com.financehub.entity;
+
+import com.financehub.tenancy.PersistTenantListener;
+import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.MappedSuperclass;
+import java.time.Instant;
+lombok.Getter;
+lombok.Setter;
+
+@Getter
+@Setter
+@MappedSuperclass
+@EntityListeners(PersistTenantListener.class)
+public abstract class BaseEntity {
+  @Column(name = "tenant_id", nullable = false, updatable = false)
+  private String tenantId;
+
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private Instant createdAt = Instant.now();
 }
