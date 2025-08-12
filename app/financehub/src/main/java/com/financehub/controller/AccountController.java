@@ -8,6 +8,7 @@ import com.financehub.repository.LedgerEntryRepository;
 import com.financehub.tenancy.TenantContext;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -63,8 +64,14 @@ public class AccountController {
     String tenantId = TenantContext.getTenantId();
     var s = org.springframework.data.domain.Sort.by("createdAt").descending();
     if (sort != null && !sort.isBlank()) {
-      s = org.springframework.data.domain.Sort.by(sort.startsWith("-") ? org.springframework.data.domain.Sort.Direction.DESC : org.springframework.data.domain.Sort.Direction.ASC,
-          sort.startsWith("-") ? sort.substring(1) : sort);
+      // Only allow sorting by a whitelist of allowed fields
+      Set<String> allowedSortFields = Set.of("createdAt", "amount", "direction", "id", "transactionId", "accountId");
+      String sortField = sort.startsWith("-") ? sort.substring(1) : sort;
+      if (allowedSortFields.contains(sortField)) {
+        s = org.springframework.data.domain.Sort.by(sort.startsWith("-") ? org.springframework.data.domain.Sort.Direction.DESC : org.springframework.data.domain.Sort.Direction.ASC,
+            sortField);
+      }
+      // else: ignore invalid sort field and use default
     }
     var pageable = org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), s);
     var pageData = ledgerEntryRepository.findByTenantIdAndAccountId(tenantId, id, pageable)
@@ -79,5 +86,3 @@ public class AccountController {
     return ResponseEntity.ok(pageData);
   }
 }
-
-
