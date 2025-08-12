@@ -64,7 +64,15 @@ public class AccountService {
     String nameLike = q == null ? "" : q;
     Page<Account> pageData;
     if (type != null && !type.isBlank()) {
-      pageData = accountRepository.findByTenantIdAndTypeAndNameContainingIgnoreCase(tenantId, Type.valueOf(type), nameLike, pageable);
+      Type enumType = null;
+      try {
+        enumType = Type.valueOf(type);
+      } catch (IllegalArgumentException ex) {
+        // Invalid type provided, fallback to no type filtering
+        pageData = accountRepository.findByTenantIdAndNameContainingIgnoreCase(tenantId, nameLike, pageable);
+        return pageData.map(this::toResponse);
+      }
+      pageData = accountRepository.findByTenantIdAndTypeAndNameContainingIgnoreCase(tenantId, enumType, nameLike, pageable);
     } else {
       pageData = accountRepository.findByTenantIdAndNameContainingIgnoreCase(tenantId, nameLike, pageable);
     }
