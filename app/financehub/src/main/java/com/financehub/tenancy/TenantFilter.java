@@ -8,12 +8,17 @@ import java.io.IOException;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.financehub.repository.TenantRepository;
 
 @Component
 @Order(10)
 public class TenantFilter extends OncePerRequestFilter {
 
   public static final String TENANT_HEADER = "X-Tenant-ID";
+
+  @Autowired
+  private TenantRepository tenantRepository;
 
   @Override
   protected void doFilterInternal(
@@ -31,7 +36,11 @@ public class TenantFilter extends OncePerRequestFilter {
           response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing X-Tenant-ID header");
           return;
         }
-        // Could validate tenant active here; defer to Phase 3 to avoid repository coupling in filter
+        // Validate tenant exists and is active
+        if (tenantRepository.findBySlugAndActiveTrue(tenantId).isEmpty()) {
+          response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or inactive tenant");
+          return;
+        }
       }
       TenantContext.setTenantId(tenantId);
       filterChain.doFilter(request, response);
