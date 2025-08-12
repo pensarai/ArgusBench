@@ -48,6 +48,10 @@ public class UserService {
     if (!tenantId.equals(u.getTenantId())) {
       throw new IllegalArgumentException("Cross-tenant modification not allowed");
     }
+    // Validate newRole against allowed roles
+    if (!isAllowedRole(newRole)) {
+      throw new IllegalArgumentException("Invalid role specified");
+    }
     // Basic role transition example: cannot demote last ADMIN in tenant
     if ("ADMIN".equals(u.getRole()) && !"ADMIN".equals(newRole)) {
       // Lock all ADMIN users for this tenant to prevent race condition
@@ -58,6 +62,13 @@ public class UserService {
     }
     u.setRole(newRole);
     return toResponse(userRepository.save(u));
+  }
+
+  private boolean isAllowedRole(String role) {
+    // Only allow roles defined in the Role enum
+    // As we do not have access to the Role enum here, we hardcode the allowed roles
+    // Update this list if new roles are added to the system
+    return "ADMIN".equals(role) || "USER".equals(role) || "MANAGER".equals(role);
   }
 
   private UserResponse toResponse(User u) {
