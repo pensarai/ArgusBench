@@ -10,9 +10,13 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+  private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
   public ResponseEntity<Map<String, Object>> handleValidation(Exception ex) {
@@ -40,7 +44,8 @@ public class GlobalExceptionHandler {
     body.put("timestamp", Instant.now().toString());
     body.put("status", 400);
     body.put("error", "Bad Request");
-    body.put("message", ex.getMessage());
+    body.put("message", "Invalid request parameter");
+    logger.warn("IllegalArgumentException: {}", ex.getMessage(), ex);
     return ResponseEntity.badRequest().body(body);
   }
 
@@ -54,5 +59,3 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
-
-
