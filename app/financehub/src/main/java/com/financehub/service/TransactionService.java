@@ -23,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
+  private static final int MAX_LEDGER_ENTRIES = 100; // Reasonable upper bound for a single transaction
+
   private final TransactionRepository transactionRepository;
   private final AccountRepository accountRepository;
   private final LedgerEntryRepository ledgerEntryRepository;
@@ -40,6 +42,17 @@ public class TransactionService {
     }
 
     // Validate and sum entries
+    List<? extends Object> entries = req.getEntries();
+    if (entries == null) {
+      throw new IllegalArgumentException("Ledger entries must not be null");
+    }
+    if (entries.size() == 0) {
+      throw new IllegalArgumentException("At least one ledger entry is required");
+    }
+    if (entries.size() > MAX_LEDGER_ENTRIES) {
+      throw new IllegalArgumentException("Too many ledger entries: maximum allowed is " + MAX_LEDGER_ENTRIES);
+    }
+
     BigDecimal debitTotal = BigDecimal.ZERO;
     BigDecimal creditTotal = BigDecimal.ZERO;
     for (var e : req.getEntries()) {
@@ -165,5 +178,3 @@ public class TransactionService {
     return reversal.getId();
   }
 }
-
-
