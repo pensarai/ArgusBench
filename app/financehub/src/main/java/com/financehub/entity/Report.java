@@ -28,6 +28,35 @@ public class Report extends BaseEntity {
 
   @Column(name = "file_path", length = 512)
   private String filePath;
+
+  /**
+   * Returns the file path if it is a safe, non-traversing relative path. Otherwise, returns null.
+   * This method helps prevent directory traversal attacks by validating the filePath.
+   */
+  public String getSafeFilePath() {
+    if (filePath == null) {
+      return null;
+    }
+    // Disallow absolute paths
+    if (filePath.startsWith("/") || filePath.contains(":\\")) {
+      return null;
+    }
+    // Disallow parent directory traversal
+    if (filePath.contains("..") || filePath.contains("\\..")) {
+      return null;
+    }
+    // Disallow backslashes (Windows traversal)
+    if (filePath.contains("\\")) {
+      return null;
+    }
+    // Disallow null bytes
+    if (filePath.contains("\0")) {
+      return null;
+    }
+    // Optionally, restrict to a safe pattern (e.g., alphanumerics, dashes, underscores, dots, and slashes)
+    if (!filePath.matches("^[a-zA-Z0-9_./-]+$")) {
+      return null;
+    }
+    return filePath;
+  }
 }
-
-
