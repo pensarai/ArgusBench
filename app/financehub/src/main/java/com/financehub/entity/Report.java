@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
+import javax.json.Json;
 
 @Getter
 @Setter
@@ -28,6 +29,21 @@ public class Report extends BaseEntity {
 
   @Column(name = "file_path", length = 512)
   private String filePath;
+
+  public void setParametersJson(String parametersJson) {
+    if (parametersJson != null && !isValidJson(parametersJson)) {
+      throw new IllegalArgumentException("Invalid JSON format for parametersJson");
+    }
+    this.parametersJson = parametersJson;
+  }
+
+  private boolean isValidJson(String json) {
+    json = json.trim();
+    try {
+      Json.createReader(new java.io.StringReader(json)).read();
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
+  }
 }
-
-
