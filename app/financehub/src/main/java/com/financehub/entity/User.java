@@ -34,6 +34,23 @@ public class User extends BaseEntity {
 
   @Column(name = "last_login")
   private Instant lastLogin;
-}
 
+  public enum Role {
+    ADMIN,
+    USER,
+    MANAGER
+  }
+
+  public void setRole(String role) {
+    if (role == null) {
+      throw new IllegalArgumentException("Role cannot be null");
+    }
+    try {
+      Role.valueOf(role);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Invalid role: " + role);
+    }
+    this.role = role;
+  }
+}
 
