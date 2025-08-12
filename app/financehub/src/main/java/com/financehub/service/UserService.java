@@ -7,7 +7,7 @@ import com.financehub.repository.UserRepository;
 import com.financehub.tenancy.TenantContext;
 import java.util.List;
 import java.util.UUID;
-import lombok.RequiredArgsConstructor;
+lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,8 +50,9 @@ public class UserService {
     }
     // Basic role transition example: cannot demote last ADMIN in tenant
     if ("ADMIN".equals(u.getRole()) && !"ADMIN".equals(newRole)) {
-      long adminCount = userRepository.countByTenantIdAndRole(tenantId, "ADMIN");
-      if (adminCount <= 1) {
+      // Lock all ADMIN users for this tenant to prevent race condition
+      List<User> admins = userRepository.findByTenantIdAndRoleForUpdate(tenantId, "ADMIN");
+      if (admins.size() <= 1) {
         throw new IllegalStateException("Cannot demote the last admin in the tenant");
       }
     }
@@ -64,4 +65,23 @@ public class UserService {
   }
 }
 
+package com.financehub.repository;
 
+import com.financehub.entity.User;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import javax.persistence.LockModeType;
+
+public interface UserRepository extends JpaRepository<User, String> {
+  Optional<User> findByTenantIdAndEmail(String tenantId, String email);
+  boolean existsByTenantIdAndEmail(String tenantId, String email);
+  long countByTenantIdAndRole(String tenantId, String role);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT u FROM User u WHERE u.tenantId = :tenantId AND u.role = :role")
+  List<User> findByTenantIdAndRoleForUpdate(@Param("tenantId") String tenantId, @Param("role") String role);
+}
