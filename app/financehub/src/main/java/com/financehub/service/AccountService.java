@@ -17,11 +17,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Set;
+import java.util.HashSet;
 
 @Service
 @RequiredArgsConstructor
 public class AccountService {
   private final AccountRepository accountRepository;
+
+  // Whitelist of allowed sort fields
+  private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(Set.of(
+    "id", "name", "type", "currency", "balance", "createdAt", "version"
+  ));
 
   @Transactional
   public AccountResponse create(AccountCreateRequest req) {
@@ -46,8 +53,10 @@ public class AccountService {
     String tenantId = TenantContext.getTenantId();
     Sort s = Sort.by("createdAt").descending();
     if (sort != null && !sort.isBlank()) {
-      s = Sort.by(sort.startsWith("-") ? Sort.Direction.DESC : Sort.Direction.ASC,
-          sort.startsWith("-") ? sort.substring(1) : sort);
+      String sortField = sort.startsWith("-") ? sort.substring(1) : sort;
+      if (ALLOWED_SORT_FIELDS.contains(sortField)) {
+        s = Sort.by(sort.startsWith("-") ? Sort.Direction.DESC : Sort.Direction.ASC, sortField);
+      } // else: ignore invalid sort field, fallback to default
     }
     Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), s);
     String nameLike = q == null ? "" : q;
@@ -71,5 +80,3 @@ public class AccountService {
     return new AccountResponse(a.getId(), a.getName(), a.getType().name(), a.getCurrency(), a.getBalance(), a.getCreatedAt());
   }
 }
-
-
