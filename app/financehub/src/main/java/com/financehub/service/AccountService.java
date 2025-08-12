@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 @RequiredArgsConstructor
@@ -26,9 +27,6 @@ public class AccountService {
   @Transactional
   public AccountResponse create(AccountCreateRequest req) {
     String tenantId = TenantContext.getTenantId();
-    if (accountRepository.existsByTenantIdAndName(tenantId, req.getName())) {
-      throw new IllegalStateException("Account name already exists");
-    }
     Account a = new Account();
     a.setId(UUID.randomUUID().toString());
     a.setTenantId(tenantId);
@@ -37,8 +35,13 @@ public class AccountService {
     a.setCurrency(req.getCurrency());
     a.setBalance(BigDecimal.ZERO);
     a.setVersion(0L);
-    Account saved = accountRepository.save(a);
-    return toResponse(saved);
+    try {
+      Account saved = accountRepository.save(a);
+      return toResponse(saved);
+    } catch (DataIntegrityViolationException ex) {
+      // DB constraint for (tenantId, name) uniqueness will prevent duplicates
+      throw new IllegalStateException("Account name already exists", ex);
+    }
   }
 
   @Transactional(readOnly = true)
@@ -71,5 +74,3 @@ public class AccountService {
     return new AccountResponse(a.getId(), a.getName(), a.getType().name(), a.getCurrency(), a.getBalance(), a.getCreatedAt());
   }
 }
-
-
