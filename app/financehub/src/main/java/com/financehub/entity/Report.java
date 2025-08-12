@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
+import javax.json.Json;
 
 @Getter
 @Setter
@@ -29,10 +30,6 @@ public class Report extends BaseEntity {
   @Column(name = "file_path", length = 512)
   private String filePath;
 
-  /**
-   * Returns the file path if it is a safe, non-traversing relative path. Otherwise, returns null.
-   * This method helps prevent directory traversal attacks by validating the filePath.
-   */
   public String getSafeFilePath() {
     if (filePath == null) {
       return null;
@@ -58,5 +55,21 @@ public class Report extends BaseEntity {
       return null;
     }
     return filePath;
+
+  public void setParametersJson(String parametersJson) {
+    if (parametersJson != null && !isValidJson(parametersJson)) {
+      throw new IllegalArgumentException("Invalid JSON format for parametersJson");
+    }
+    this.parametersJson = parametersJson;
+  }
+
+  private boolean isValidJson(String json) {
+    json = json.trim();
+    try {
+      Json.createReader(new java.io.StringReader(json)).read();
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
   }
 }
