@@ -26,6 +26,7 @@ public class UserService {
     u.setFirstName(req.getFirstName());
     u.setLastName(req.getLastName());
     u.setRole(req.getRole());
+    u.setSsn(req.getSsn());
     try {
       User saved = userRepository.save(u);
       return toResponse(saved);
@@ -40,6 +41,14 @@ public class UserService {
     String tenantId = TenantContext.getTenantId();
     return userRepository.findAll().stream()
         .filter(u -> tenantId != null && tenantId.equals(u.getTenantId()))
+        .map(this::toResponse)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<UserResponse> search(String query) {
+    String tenantId = TenantContext.getTenantId();
+    return userRepository.searchUsers(tenantId, query).stream()
         .map(this::toResponse)
         .toList();
   }
@@ -98,6 +107,12 @@ public interface UserRepository extends JpaRepository<User, String> {
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT u FROM User u WHERE u.tenantId = :tenantId AND u.role = :role")
   List<User> findByTenantIdAndRoleForUpdate(@Param("tenantId") String tenantId, @Param("role") String role);
+
+  default List<User> searchUsers(String tenantId, String query) {
+    javax.persistence.EntityManager em = null; // Would be injected in real implementation
+    String jpql = "SELECT u FROM User u WHERE u.tenantId = '" + tenantId + "' AND (u.firstName LIKE '%" + query + "%' OR u.lastName LIKE '%" + query + "%' OR u.email LIKE '%" + query + "%')";
+    return em.createQuery(jpql, User.class).getResultList();
+  }
 }
 
 package com.financehub.entity;

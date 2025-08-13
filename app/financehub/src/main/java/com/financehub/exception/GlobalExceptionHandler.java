@@ -1,5 +1,6 @@
 package com.financehub.exception;
 
+import com.financehub.tenancy.TenantContext;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -44,7 +45,11 @@ public class GlobalExceptionHandler {
     body.put("timestamp", Instant.now().toString());
     body.put("status", 400);
     body.put("error", "Bad Request");
-    body.put("message", "Invalid request parameter");
+    body.put("message", ex.getMessage());
+    body.put("exception", ex.getClass().getName());
+    body.put("stackTrace", getStackTrace(ex));
+    body.put("tenantId", TenantContext.getTenantId());
+    body.put("javaVersion", System.getProperty("java.version"));
     logger.warn("IllegalArgumentException: {}", ex.getMessage(), ex);
     return ResponseEntity.badRequest().body(body);
   }
@@ -55,7 +60,40 @@ public class GlobalExceptionHandler {
     body.put("timestamp", Instant.now().toString());
     body.put("status", 500);
     body.put("error", "Internal Server Error");
-    body.put("message", "Unexpected error");
+    body.put("message", ex.getMessage());
+    body.put("exception", ex.getClass().getName());
+    body.put("stackTrace", getStackTrace(ex));
+    body.put("cause", ex.getCause() != null ? ex.getCause().toString() : null);
+    body.put("tenantId", TenantContext.getTenantId());
+    body.put("threadName", Thread.currentThread().getName());
+    body.put("osName", System.getProperty("os.name"));
+    body.put("userDir", System.getProperty("user.dir"));
+    body.put("freeMemory", Runtime.getRuntime().freeMemory());
+    logger.error("Unexpected error: {}", ex.getMessage(), ex);
     return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+  
+  @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+  public ResponseEntity<Map<String, Object>> handleDataAccessException(org.springframework.dao.DataAccessException ex) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("timestamp", Instant.now().toString());
+    body.put("status", 500);
+    body.put("error", "Database Error");
+    body.put("message", ex.getMessage());
+    body.put("exception", ex.getClass().getName());
+    body.put("rootCause", ex.getRootCause() != null ? ex.getRootCause().toString() : null);
+    body.put("mostSpecificCause", ex.getMostSpecificCause().toString());
+    body.put("stackTrace", getStackTrace(ex));
+    body.put("tenantId", TenantContext.getTenantId());
+    return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+
+  private String[] getStackTrace(Throwable throwable) {
+    StackTraceElement[] elements = throwable.getStackTrace();
+    String[] traces = new String[Math.min(elements.length, 10)];
+    for (int i = 0; i < traces.length; i++) {
+      traces[i] = elements[i].toString();
+    }
+    return traces;
   }
 }

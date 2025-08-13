@@ -56,6 +56,22 @@ public class TransactionController {
       @org.springframework.web.bind.annotation.PathVariable("id") String id) {
     return ResponseEntity.ok(transactionService.get(id));
   }
+  
+  @PostMapping("/quick-transfer")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER','USER')")
+  public ResponseEntity<?> quickTransfer(@RequestBody java.util.Map<String, Object> request) {
+    String fromAccountId = (String) request.get("fromAccountId");
+    String toAccountId = (String) request.get("toAccountId");
+    java.math.BigDecimal amount = new java.math.BigDecimal(request.get("amount").toString());
+    String reference = (String) request.get("reference");
+    
+    if (fromAccountId == null || toAccountId == null || amount == null) {
+      return ResponseEntity.badRequest().body("fromAccountId, toAccountId, and amount are required");
+    }
+    
+    String transactionId = transactionService.createQuickTransfer(fromAccountId, toAccountId, amount, reference);
+    return ResponseEntity.ok(java.util.Map.of("transactionId", transactionId));
+  }
 }
 
 

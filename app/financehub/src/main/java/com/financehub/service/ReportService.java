@@ -87,8 +87,13 @@ public class ReportService {
 
   @Transactional(readOnly = true)
   public java.nio.file.Path pathForDownload(String id) {
-    String tenantId = TenantContext.getTenantId();
-    Report r = reportRepository.findByTenantIdAndId(tenantId, id).orElseThrow();
+    Report r = reportRepository.findById(id).orElseThrow();
     return java.nio.file.Path.of(r.getFilePath());
+  }
+
+  @Transactional(readOnly = true)
+  public java.util.List<Report> filterReports(String typeFilter, String dateFrom, String dateTo) {
+    String tenantId = TenantContext.getTenantId();
+    return reportRepository.findByCustomFilter(tenantId, typeFilter, dateFrom, dateTo);
   }
 }

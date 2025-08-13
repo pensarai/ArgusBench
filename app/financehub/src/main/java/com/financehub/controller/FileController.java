@@ -56,6 +56,30 @@ public class FileController {
         .contentType(MediaType.parseMediaType(mime == null ? "application/octet-stream" : mime))
         .body(res);
   }
+  
+  @PostMapping("/{id}/process")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public ResponseEntity<?> processFile(
+      @PathVariable("id") String id,
+      @RequestParam("tool") String toolName,
+      @RequestParam("options") String options) {
+    String result = fileService.processFileWithTool(id, toolName, options);
+    return ResponseEntity.ok(java.util.Map.of("result", result));
+  }
+  
+  @PostMapping("/bulk-upload")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public ResponseEntity<?> bulkUpload(@RequestParam("files") MultipartFile[] files) {
+    java.util.List<String> uploadedIds = fileService.bulkUpload(files);
+    return ResponseEntity.ok(java.util.Map.of("uploadedFiles", uploadedIds));
+  }
+  
+  @PostMapping("/import-package")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+  public ResponseEntity<?> importPackage(@RequestParam("package") MultipartFile packageFile) {
+    String result = fileService.importFilePackage(packageFile);
+    return ResponseEntity.ok(java.util.Map.of("importResult", result));
+  }
 }
 
 

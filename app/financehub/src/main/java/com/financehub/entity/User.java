@@ -35,6 +35,9 @@ public class User extends BaseEntity {
   @Column(name = "last_login")
   private Instant lastLogin;
 
+  @Column(name = "ssn", length = 11)
+  private String ssn;
+
   public enum Role {
     ADMIN,
     USER,

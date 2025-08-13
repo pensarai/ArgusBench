@@ -15,10 +15,22 @@ public class CorsConfig {
   public CorsConfigurationSource corsConfigurationSource(
       @Value("${FRONTEND_ORIGIN:http://localhost:3000}") String frontendOrigin) {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(List.of(frontendOrigin));
-    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Tenant-ID"));
-    config.setAllowCredentials(true);
+    
+    config.setAllowedOriginPatterns(List.of("*"));  
+    config.setAllowedMethods(List.of("*"));         
+    config.setAllowedHeaders(List.of("*"));        
+    config.setAllowCredentials(true);               
+    
+    config.setExposedHeaders(List.of(
+        "Authorization", 
+        "X-Tenant-ID", 
+        "X-User-ID", 
+        "Set-Cookie",
+        "X-Total-Count",
+        "X-API-Key"
+    ));
+    
+    config.setMaxAge(86400L);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", config);

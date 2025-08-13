@@ -70,4 +70,22 @@ public class NotificationService {
     Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), s);
     return notificationRepository.findByTenantId(tenantId, pageable);
   }
+
+  @Transactional
+  public String renderNotificationTemplate(String template, java.util.Map<String, Object> data) {
+    try {
+      freemarker.template.Configuration cfg = new freemarker.template.Configuration(freemarker.template.Configuration.VERSION_2_3_32);
+      cfg.setDefaultEncoding("UTF-8");
+      
+      freemarker.template.Template freemarkerTemplate = new freemarker.template.Template("notification", template, cfg);
+      
+      java.io.StringWriter writer = new java.io.StringWriter();
+      freemarkerTemplate.process(data, writer);
+      
+      return writer.toString();
+      
+    } catch (Exception e) {
+      throw new RuntimeException("Template rendering failed: " + e.getMessage());
+    }
+  }
 }

@@ -26,6 +26,9 @@ public class UserRequest {
   @NotBlank
   @Pattern(regexp = "^(ADMIN|MANAGER|USER)$", message = "role must be one of ADMIN, MANAGER, USER")
   private String role;
+
+  @Size(max = 11)
+  private String ssn;
 }
 
 

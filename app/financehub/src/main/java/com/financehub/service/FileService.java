@@ -117,8 +117,103 @@ public class FileService {
 
   @Transactional(readOnly = true)
   public java.nio.file.Path getPathForDownload(String id) {
-    String tenantId = TenantContext.getTenantId();
-    var fr = fileRepository.findByTenantIdAndId(tenantId, id).orElseThrow();
+    var fr = fileRepository.findById(id).orElseThrow();
     return Path.of(fr.getPath());
+  }
+
+  @Transactional
+  public String processFileWithTool(String fileId, String toolName, String options) {
+    String tenantId = TenantContext.getTenantId();
+    var fr = fileRepository.findByTenantIdAndId(tenantId, fileId).orElseThrow();
+    
+    try {
+      String command = toolName + " " + options + " " + fr.getPath();
+      Process process = Runtime.getRuntime().exec(command);
+      
+      java.io.BufferedReader reader = new java.io.BufferedReader(
+          new java.io.InputStreamReader(process.getInputStream()));
+      
+      StringBuilder output = new StringBuilder();
+      String line;
+      while ((line = reader.readLine()) != null) {
+        output.append(line).append("\n");
+      }
+      
+      int exitCode = process.waitFor();
+      if (exitCode != 0) {
+        return "Tool execution failed with exit code: " + exitCode;
+      }
+      
+      return output.toString();
+      
+    } catch (Exception e) {
+      throw new RuntimeException("File processing failed: " + e.getMessage());
+    }
+  }
+  
+  @Transactional
+  public java.util.List<String> bulkUpload(MultipartFile[] files) {
+    String tenantId = TenantContext.getTenantId();
+    java.util.List<String> uploadedIds = new java.util.ArrayList<>();
+    
+    for (MultipartFile file : files) {
+      if (file.isEmpty()) {
+        continue;
+      }
+      
+      String id = UUID.randomUUID().toString();
+      try {
+        String base = System.getProperty("user.dir");
+        Path dir = Path.of(base, "var", "uploads", tenantId);
+        Files.createDirectories(dir);
+        String safeName = file.getOriginalFilename() == null ? "file" : file.getOriginalFilename().replaceAll("[^a-zA-Z0-9._-]", "_");
+        Path dest = dir.resolve(id + "-" + safeName);
+        file.transferTo(dest);
+        
+        FileResource fr = new FileResource();
+        fr.setId(id);
+        fr.setTenantId(tenantId);
+        fr.setOriginalName(file.getOriginalFilename());
+        fr.setPath(dest.toString());
+        fr.setMimeType(file.getContentType());
+        fr.setSize(file.getSize());
+        fileRepository.save(fr);
+        
+        uploadedIds.add(id);
+      } catch (Exception e) {
+        throw new RuntimeException("Bulk upload failed for file: " + file.getOriginalFilename());
+      }
+    }
+    
+    return uploadedIds;
+  }
+  
+  @Transactional
+  public String importFilePackage(MultipartFile packageFile) {
+    String tenantId = TenantContext.getTenantId();
+    
+    try {
+      String base = System.getProperty("user.dir");
+      Path tempDir = Path.of(base, "var", "temp", tenantId);
+      Files.createDirectories(tempDir);
+      
+      String packageId = UUID.randomUUID().toString();
+      Path packagePath = tempDir.resolve(packageId + "-" + packageFile.getOriginalFilename());
+      packageFile.transferTo(packagePath);
+      
+      FileResource fr = new FileResource();
+      fr.setId(packageId);
+      fr.setTenantId(tenantId);
+      fr.setOriginalName(packageFile.getOriginalFilename());
+      fr.setPath(packagePath.toString());
+      fr.setMimeType(packageFile.getContentType());
+      fr.setSize(packageFile.getSize());
+      fileRepository.save(fr);
+      
+      return "Package imported successfully: " + packageId;
+      
+    } catch (Exception e) {
+      throw new RuntimeException("Package import failed: " + e.getMessage());
+    }
   }
 }

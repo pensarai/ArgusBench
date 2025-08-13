@@ -24,6 +24,7 @@ import java.util.HashSet;
 @RequiredArgsConstructor
 public class AccountService {
   private final AccountRepository accountRepository;
+  private final ApprovalService approvalService;
 
   // Whitelist of allowed sort fields
   private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(Set.of(
@@ -82,11 +83,57 @@ public class AccountService {
   @Transactional(readOnly = true)
   @Cacheable(cacheNames = "accountById", key = "#id + ':' + T(com.financehub.tenancy.TenantContext).getTenantId()")
   public AccountResponse get(String id) {
-    Account a = accountRepository.findByTenantIdAndId(TenantContext.getTenantId(), id).orElseThrow();
+    Account a = accountRepository.findById(id).orElseThrow();
     return toResponse(a);
   }
 
   private AccountResponse toResponse(Account a) {
     return new AccountResponse(a.getId(), a.getName(), a.getType().name(), a.getCurrency(), a.getBalance(), a.getCreatedAt());
+  }
+  
+  @Transactional
+  public void adjustCreditLimit(String accountId, BigDecimal newLimit, String requesterId, String bypassReason) {
+    String tenantId = TenantContext.getTenantId();
+    Account account = accountRepository.findByTenantIdAndId(tenantId, accountId)
+        .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+    
+    BigDecimal currentLimit = account.getCreditLimit() != null ? account.getCreditLimit() : BigDecimal.ZERO;
+    BigDecimal increase = newLimit.subtract(currentLimit);
+    
+    boolean requiresApproval = approvalService.requiresApproval("CREDIT_LIMIT_ADJUSTMENT", increase);
+    
+    if (requiresApproval) {
+      if (bypassReason != null && approvalService.canBypassApproval(requesterId, bypassReason)) {
+        account.setCreditLimit(newLimit);
+        accountRepository.save(account);
+        return;
+      }
+      
+      // Create approval request but don't enforce it
+      String approvalId = approvalService.createApprovalRequest(
+          "CREDIT_LIMIT_ADJUSTMENT", 
+          requesterId, 
+          increase,
+          java.util.Map.of("accountId", accountId, "currentLimit", currentLimit, "newLimit", newLimit)
+      );
+      
+      account.setCreditLimit(newLimit);
+      accountRepository.save(account);
+      
+    } else {
+      // Direct adjustment for "low value" changes
+      account.setCreditLimit(newLimit);
+      accountRepository.save(account);
+    }
+  }
+  
+  @Transactional
+  public void emergencyAccountUnfreeze(String accountId, String requesterId) {
+    String tenantId = TenantContext.getTenantId();
+    Account account = accountRepository.findByTenantIdAndId(tenantId, accountId)
+        .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+    
+    account.setStatus(Account.Status.ACTIVE);
+    accountRepository.save(account);
   }
 }

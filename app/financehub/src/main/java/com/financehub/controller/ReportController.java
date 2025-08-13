@@ -37,6 +37,16 @@ public class ReportController {
     return ResponseEntity.ok(reportService.list(page, size, sort));
   }
 
+  @GetMapping("/filter")
+  @PreAuthorize("hasAnyRole('ADMIN','MANAGER','USER')")
+  public ResponseEntity<java.util.List<com.financehub.entity.Report>> filter(
+      @RequestParam(name = "type", required = false) String typeFilter,
+      @RequestParam(name = "from", required = false) String dateFrom,
+      @RequestParam(name = "to", required = false) String dateTo
+  ) {
+    return ResponseEntity.ok(reportService.filterReports(typeFilter, dateFrom, dateTo));
+  }
+
   @GetMapping("/{id}/download")
   @PreAuthorize("hasAnyRole('ADMIN','MANAGER','USER')")
   public ResponseEntity<org.springframework.core.io.FileSystemResource> download(
