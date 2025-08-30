@@ -1,0 +1,138 @@
+UNDETECTED VULNERABILITIES - STATIC ANALYSIS GAP REPORT (UPDATED)
+===================================================================
+
+Based on the corrected vulnerability analysis, here are the 9 ground truth vulnerabilities 
+that were NOT detected by the static analysis tool:
+
+OWASP A01 - BROKEN ACCESS CONTROL
+==================================
+
+JAVA-A01-005: Cross-tenant File Download
+- File: app/financehub/src/main/java/com/financehub/service/FileService.java (line 120)
+- CWE-863: Missing tenant verification for file downloads
+
+OWASP A02 - CRYPTOGRAPHIC FAILURES
+===================================
+
+JAVA-A02-002: Hardcoded Cryptographic Secret
+- File: app/financehub/src/main/resources/application.yml (line 52)
+- CWE-798: Hardcoded secret "MyHardcodedSecret123!@#"
+
+JAVA-A02-003: Plaintext Storage of PII
+- File: app/financehub/src/main/java/com/financehub/service/UserService.java (line 29)
+- CWE-312: SSN stored without encryption
+
+OWASP A05 - SECURITY MISCONFIGURATION
+======================================
+
+JAVA-A05-001: Exposed Debug and Actuator Endpoints
+- File: app/financehub/src/main/resources/application.yml (lines 35-50)
+- CWE-200, CWE-489: All actuator endpoints exposed without auth
+
+JAVA-A05-002: Permissive CORS Configuration
+- File: app/financehub/src/main/java/com/financehub/config/CorsConfig.java (lines 20-23)
+- CWE-346: Allows all origins (*) with credentials
+
+OWASP A06 - VULNERABLE COMPONENTS
+==================================
+
+JAVA-A06-001: Vulnerable Components and Dependencies
+- File: app/financehub/pom.xml (line 8)
+- CWE-1104: Outdated Spring Boot 2.6.0 with known CVEs
+
+OWASP A08 - SOFTWARE AND DATA INTEGRITY FAILURES
+================================================
+
+JAVA-A08-001: Software and Data Integrity Failures in File Upload
+- File: app/financehub/src/main/java/com/financehub/service/FileService.java (lines 155-189)
+- CWE-353: No integrity validation for uploaded files
+
+ML-SPECIFIC VULNERABILITIES
+===========================
+
+JAVA-ML-006: Unauthorized ML Model Export
+- File: app/financehub/src/main/java/com/financehub/controller/MLController.java (lines 399-415)
+- CWE-863: No authorization checks for model export
+
+AI/AGENTIC-AI VULNERABILITIES
+=============================
+
+JAVA-AG-003: Excessive AI Tool Permissions by Default
+- File: app/financehub/src/main/java/com/financehub/service/AIService.java (lines 28-35)
+- CWE-269: Wildcard permissions for filesystem, database, network access
+
+DETECTION GAP ANALYSIS (UPDATED)
+=================================
+
+Coverage Rate: 76.9% (30 out of 39 ground truth vulnerabilities detected)
+False Positive Rate: 88.3% (227 false positives out of 257 total results)
+True Positive Rate: 11.7% (30 true positives out of 257 total results)
+
+VULNERABILITIES NOW SUCCESSFULLY DETECTED
+=========================================
+
+The corrected analysis shows these previously undetected vulnerabilities are now matched:
+
+✓ JAVA-A02-004: Weak Random Token Generation
+✓ JAVA-A03-002: SQL Injection in Report Filter
+✓ JAVA-A03-003: LDAP Injection in Authentication
+✓ JAVA-A03-005: Server-Side Template Injection
+✓ JAVA-A04-001: Insufficient Rate Limiting for Authentication
+✓ JAVA-A05-003: Error Information Disclosure
+✓ JAVA-A07-001: JWT Algorithm Confusion and Signature Bypass
+✓ JAVA-A07-002: Session Fixation in Authentication
+✓ JAVA-A09-001: Security Logging and Monitoring Failures
+✓ JAVA-ML-004: Raw PII Storage in ML Training Data
+
+SEVERITY BREAKDOWN OF REMAINING UNDETECTED VULNERABILITIES
+=========================================================
+
+High Severity: 4
+- JAVA-A01-005: Cross-tenant File Download
+- JAVA-A02-003: Plaintext Storage of PII
+- JAVA-A06-001: Vulnerable Components
+- JAVA-AG-003: Excessive AI Tool Permissions
+
+Medium Severity: 5
+- JAVA-A02-002: Hardcoded Cryptographic Secret
+- JAVA-A05-001: Exposed Debug Endpoints
+- JAVA-A05-002: Permissive CORS Configuration
+- JAVA-A08-001: File Integrity Failures
+- JAVA-ML-006: Unauthorized ML Model Export
+
+REMAINING DETECTION GAPS
+========================
+
+Primary gaps still exist in:
+1. Configuration vulnerabilities (YAML, XML files) - 3 vulnerabilities
+2. Dependency/component vulnerabilities - 1 vulnerability
+3. Authorization logic in ML components - 1 vulnerability
+4. File integrity validation - 1 vulnerability
+5. Cross-tenant access control edge cases - 1 vulnerability
+6. Cryptographic implementation details - 2 vulnerabilities
+7. AI tool permission management - 1 vulnerability
+
+RECOMMENDATIONS FOR REMAINING GAPS
+==================================
+
+1. Enhance configuration file scanning (YAML, XML, properties files)
+2. Add dependency vulnerability scanning integration (Maven, Gradle)
+3. Improve detection of authorization bypass patterns in API controllers
+4. Add file upload integrity validation detection rules
+5. Enhance cross-tenant isolation pattern recognition
+6. Improve hardcoded secret detection in configuration files
+7. Add AI/ML specific security pattern detection
+
+OVERALL ASSESSMENT
+==================
+
+The corrected analysis shows significant improvement in detection capability:
+- Coverage improved from 51.3% to 76.9%
+- Only 9 critical vulnerabilities remain undetected (down from 19)
+- Most injection vulnerabilities are now properly detected
+- Authentication/authorization flaws are largely captured
+- Main gaps remain in configuration and dependency management
+
+This represents a much stronger security analysis tool performance, with 
+remaining gaps focused on specific technical areas that require specialized
+detection approaches.
