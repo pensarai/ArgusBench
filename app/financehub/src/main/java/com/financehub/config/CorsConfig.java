@@ -16,9 +16,10 @@ public class CorsConfig {
       @Value("${FRONTEND_ORIGIN:http://localhost:3000}") String frontendOrigin) {
     CorsConfiguration config = new CorsConfiguration();
     
-    config.setAllowedOriginPatterns(List.of("*"));  
-    config.setAllowedMethods(List.of("*"));         
-    config.setAllowedHeaders(List.of("*"));        
+    // Use the trusted frontendOrigin environment variable to restrict allowed origins
+    config.setAllowedOriginPatterns(List.of(frontendOrigin));  
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Tenant-ID", "X-User-ID", "X-API-Key"));
     config.setAllowCredentials(true);               
     
     config.setExposedHeaders(List.of(
@@ -37,5 +38,3 @@ public class CorsConfig {
     return source;
   }
 }
-
-
